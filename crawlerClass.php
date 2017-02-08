@@ -1,87 +1,106 @@
 <?php 
 
 class Crawler {
-	
 	private $dataType;   // Data type which is given by user
 	private $depth;   // Depth of crawling
-	private $seedPage;   // Targeted site url
-	private $done = array();   // Array for already crawled links
-	private $queue = array();   // Array for links which is gonna be crawled
+	private $ceedPage;   // Targeted site url
+	private $parsedCeedPage;
 	private $downloadList = array();   // Array for download links which has desired data types
-	private $info = array();   // Array for infos of links
 	private $options;   // User-Agent options
 	private $context;   // Context for request info
+	private $dom;
+	private $allLinks = array();
+	private $linkIndex;
+	private $nextLayerLoc;
+	private $layerCounter;
 	
-	// Constructor of crawler class
-	public function __construct($dataType, $depth, $seedPage) {
+	
+	
+	public function __construct($dataType, $depth, $ceedPage) {
 		$this->dataType = $dataType;
 		$this->depth = $depth;
-		$this->seedPage = $seedPage;
+		$this->ceedPage = $ceedPage;
 	}
 	
-	// Prepare crawler for crawling
 	public function prepareCrawling() {
 		// Creating user-agent settings
 		$this->options = array('http'=>array('method'=>"GET", 'headers'=>"User-Agent: squeezerBot\n"));
 		$this->context = stream_context_create($this->options);
-		// Creating queue
-		$this->queue[0] = $this->seedPage;
+		
+		array_push($this->allLinks, $this->ceedPage);
+		$this->layerCounter = 0;
+		$this->linkIndex = 0;
+		$this->nextLayerLoc = 1;
+		
+		// Create DOM object to get targeted site's infos as DOM
+		$this->dom = new DOMDocument();
+		$this->parsedCeedPage = parse_url($this->ceedPage);
 	}
 
-	// Main function of crawling process
 	public function crawl() {
-		// Crawl while queue is not empty and check for depth as well
-		while(($this->queue) && $this->depth > 0) {
-			// Take first element from queue
-			$url = array_shift($this->queue);
-			// Create DOM object to get targeted site's infos as DOM
-			$dom = new DOMDocument();
+		if($this->depth > $this->layerCounter) {
+			
+			$url = $this->allLinks[$this->linkIndex];
+			
 			// @Suppress warnings
-			@$dom->loadHTML(file_get_contents($url, false, $this->context));  
-			// Getting tagged elements of DOM
-			$linkArray = $dom->getElementsByTagName("a");
+			@$this->dom->loadHTML(file_get_contents($url, false, $this->context));  
+			
+			$linkArray = $this->dom->getElementsByTagName("a");
+			
 			foreach ($linkArray as $link) {
-				// Getting tagged elements' attributes, a.k.a. links
-				$curr = $link->getAttribute("href");
-				// Fixing strings as desired, using php's substr and parse_url functions
-				if (substr($curr, 0, 1) == "/") {
-					$curr = parse_url($url)["scheme"]."://".parse_url($url)["host"].$curr;
-				}else if (substr($curr, 0, 1) == "#") {
-					$curr = parse_url($url)["scheme"]."://".parse_url($url)["host"].parse_url($url)["path"].$curr;
-				}else if (substr($curr, 0, 5) != "https" && substr($curr, 0, 4) != "http") {
-					$curr = parse_url($url)["scheme"]."://".parse_url($url)["host"].parse_url($url)["path"].$curr;
-				}
-				// Check link if it's data type equals to given data type
-				// and if it's not in download list, add it to download list
-				if ((substr($curr, strlen($curr)-4) == $this->dataType) && (!in_array($curr, $this->downloadList))) {
-					$this->downloadList[] = $curr;
-				}
-				// Check if the current link has already been crawled
-				if (!in_array($curr, $this->done) && !in_array($curr, $this->queue)) {
-					// Store current link to done
-					$this->done[] = $curr;
-					// Store current link to queue as well
-					$this->queue[] = $curr;
-					// Get details of the current link
-					//getDetails($curr);  
+				
+				$curr = $this->linkCorrection($link->getAttribute("href"), $url);
+				$parsedURL = parse_url($curr);
+				
+				// Is retrieved link sublink of the ceed
+				if (isset($parsedURL["path"]) && strpos($parsedURL["path"],$this->parsedCeedPage["path"]) !== false) {
+					// Check if the current link has already been crawled
+					if (!in_array($curr, $this->allLinks)) {
+						array_push($this->allLinks, $curr);
+						if ($this->dataTypeControl($curr)){ // checks data type 
+							array_push($this->downloadList,$curr);
+						}
+					}
 				}
 			}
-			// Decrease depth
-			$this->depth--;
+
+			$this->linkIndex++;
+			// checks if passed next layer 
+			if ($this->linkIndex == $this->nextLayerLoc) {
+				$this->layerCounter++;
+				$this->nextLayerLoc = count($this->allLinks);
+			}
+			$this->crawl(); // recursion starts
 		}
+	}
+	
+	private function linkCorrection ($link, $ruleLink) {
+		$parsedURL = parse_url($ruleLink); // url parsed for controls
+		// Fixing strings as desired, using php's substr and parse_url functions
+		if (substr($link, 0, 1) == "/") {
+			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$link;
+		}else if (substr($link, 0, 1) == "#") {
+			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$parsedURL["path"].$link;
+		}else if (substr($link, 0, 5) != "https" && substr($link, 0, 4) != "http") {
+			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$parsedURL["path"].$link;
+		}
+		return $link;
+	}
+	
+	private function dataTypeControl ($link) {
+		$pieces = explode('.', $link);
+		$ext = end($pieces);
+		if ($this->dataType == $ext) {
+			return true;
+		}
+		return false;
 	}
 	
 	// Getting extracted links according to given data type
 	public function getDownloadList() {
-		echo '<pre>';
-		print_r($this->downloadList);
+		return $this->downloadList;
 	}
-	
-	// Getting extracted links according to given data type
-	public function getCrawledList() {
-		echo '<pre>';
-		print_r($this->done);
-	}
+
 	
 	// Funciton for retrieving details of links
 	public function getDetails($url) {
@@ -126,14 +145,12 @@ class Crawler {
 }
 
 // Test
-$dataType = ".pdf";
-$depth = 16;
-$seedPage = "https://www.ce.yildiz.edu.tr/personal/pkoord/file";
+$dataType = "pdf";
+$depth = 4;
+$ceedPage = "https://www.ce.yildiz.edu.tr/personal/pkoord";
 
 // Initialize test
-$myCrawler = new Crawler($dataType, $depth, $seedPage);
+$myCrawler = new Crawler($dataType, $depth, $ceedPage);
 $myCrawler->prepareCrawling();
 $myCrawler->crawl();
-$myCrawler->getDownloadList();
-$myCrawler->getCrawledList();
 ?>
