@@ -1,7 +1,6 @@
 <?php 
 
 class Crawler {
-	
 	private $dataType;   // Data type which is given by user
 	private $depth;   // Depth of crawling
 	private $seedPage;   // Targeted site url
@@ -15,18 +14,17 @@ class Crawler {
 	private $options;   // User-Agent options
 	private $context;   // Context for request info
 	
-	// Constructor of crawler class
-	public function __construct($dataType, $depth, $seedPage) {
+	public function __construct($dataType, $depth, $ceedPage) {
 		$this->dataType = $dataType;
 		$this->depth = $depth;
-		$this->seedPage = $seedPage;
+		$this->ceedPage = $ceedPage;
 	}
 	
-	// Prepare crawler for crawling
 	public function prepareCrawling() {
 		// Creating user-agent settings
 		$this->options = array('http'=>array('method'=>"GET", 'headers'=>"User-Agent: squeezerBot\n"));
 		$this->context = stream_context_create($this->options);
+
 		// Creating DOM object to get targeted site's infos as DOM
 		$this->dom = new DOMDocument();
 		// Initializing values to start crawling 
@@ -38,7 +36,6 @@ class Crawler {
 		$this->parsedSeedPage = parse_url($this->seedPage);
 	}
 
-	// Main function of crawling process
 	public function crawl() {
 		// Check if layerCounter exceeded the depth or not
 		if($this->depth > $this->layerCounter) {
@@ -80,6 +77,7 @@ class Crawler {
 			$this->crawl(); 
 		}
 	}
+		
 	
 	// Function which fixes and returns link according to rule link
 	private function linkCorrection($link, $ruleLink) {
@@ -109,20 +107,54 @@ class Crawler {
 		$ext = end($pieces);
 		if ($this->dataType == $ext) {
 			return true;
-		}
+    }
 		return false;
 	}
-	
-	// Getting extracted links according to given data type
-	public function getDownloadList() {
-		echo '<pre>';
-		print_r($this->downloadList);
-	}
+  
 	
 	// Getting extracted links according to given data type
 	public function getCrawledList() {
 		echo '<pre>';
 		print_r($this->allLinks);
+	public function getDownloadList() {
+		return $this->downloadList;
+	}
+
+	
+	// Funciton for retrieving details of links
+	public function getDetails($url) {
+		// Getting targeted site as Document Object Model
+		$dom = new DOMDocument();
+		// @Suppress warnings
+		@$dom->loadHTML(file_get_contents($url, false, $this->context));
+		// Title info
+		$title = $dom->getElementsByTagName("title");
+		// Check if can't grab title
+		if ($title->length > 0) {
+			$node = $title->item(0);
+			$title = $node->nodeValue;
+		}else {
+			$title = "";
+		}	
+		// Description info
+		$description = "";
+		// Keywords info
+		$keywords = "";
+		// Getting metas from DOM
+		$metas = $dom->getElementsByTagName("meta");
+		for ($i = 0; $i < $metas->length; $i++) {
+			$meta = $metas->item($i);
+			if ($meta->getAttribute("name") == strtolower("description")) {
+				$description = $meta->getAttribute("content");
+			}
+			if ($meta->getAttribute("name") == strtolower("keywords")) {
+				$keywords = $meta->getAttribute("content");
+			}
+		}
+		$info['Title'] = $title;
+		$info['Description'] = $description;
+		$info['Keywords'] = $keywords;
+		$info['URL'] = $url;
 	}
 	
 	// Destructor of crawler class
@@ -133,13 +165,11 @@ class Crawler {
 
 // Test
 $dataType = "pdf";
-$depth = 2;
-$seedPage = "https://www.ce.yildiz.edu.tr/personal/pkoord/file";
+$depth = 4;
+$ceedPage = "https://www.ce.yildiz.edu.tr/personal/pkoord";
 
 // Initialize test
-$myCrawler = new Crawler($dataType, $depth, $seedPage);
+$myCrawler = new Crawler($dataType, $depth, $ceedPage);
 $myCrawler->prepareCrawling();
 $myCrawler->crawl();
-$myCrawler->getDownloadList();
-$myCrawler->getCrawledList();
 ?>
