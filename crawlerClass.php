@@ -5,10 +5,13 @@ class Crawler {
 	private $dataType;   // Data type which is given by user
 	private $depth;   // Depth of crawling
 	private $seedPage;   // Targeted site url
-	private $done = array();   // Array for already crawled links
-	private $queue = array();   // Array for links which is gonna be crawled
+	private $parsedSeedPage;   // Parsed url of seed page for path controls 
+	private $linkIndex;   // Index for allLinks array
+	private $layerEnd;   // Last location of current layer
+	private $layerCounter;   // Counter for layer depth
+	private $allLinks = array();   // Array for all crawled links
 	private $downloadList = array();   // Array for download links which has desired data types
-	private $info = array();   // Array for infos of links
+	private $dom;   // DOMDocument
 	private $options;   // User-Agent options
 	private $context;   // Context for request info
 	
@@ -24,51 +27,90 @@ class Crawler {
 		// Creating user-agent settings
 		$this->options = array('http'=>array('method'=>"GET", 'headers'=>"User-Agent: squeezerBot\n"));
 		$this->context = stream_context_create($this->options);
-		// Creating queue
-		$this->queue[0] = $this->seedPage;
+		// Creating DOM object to get targeted site's infos as DOM
+		$this->dom = new DOMDocument();
+		// Initializing values to start crawling 
+		$this->allLinks[] = $this->seedPage;
+		$this->linkIndex = 0;
+		$this->layerCounter = 0;
+		$this->layerEnd = 1;
+		// Parsing url of seed page for path controls at crawling
+		$this->parsedSeedPage = parse_url($this->seedPage);
 	}
 
 	// Main function of crawling process
 	public function crawl() {
-		// Crawl while queue is not empty and check for depth as well
-		while(($this->queue) && $this->depth > 0) {
-			// Take first element from queue
-			$url = array_shift($this->queue);
-			// Create DOM object to get targeted site's infos as DOM
-			$dom = new DOMDocument();
+		// Check if layerCounter exceeded the depth or not
+		if($this->depth > $this->layerCounter) {
+			// Get the link from queue
+			$url = $this->allLinks[$this->linkIndex];
 			// @Suppress warnings
-			@$dom->loadHTML(file_get_contents($url, false, $this->context));  
+			@$this->dom->loadHTML(file_get_contents($url, false, $this->context));  
 			// Getting tagged elements of DOM
-			$linkArray = $dom->getElementsByTagName("a");
+			$linkArray = $this->dom->getElementsByTagName("a");
 			foreach ($linkArray as $link) {
-				// Getting tagged elements' attributes, a.k.a. links
-				$curr = $link->getAttribute("href");
-				// Fixing strings as desired, using php's substr and parse_url functions
-				if (substr($curr, 0, 1) == "/") {
-					$curr = parse_url($url)["scheme"]."://".parse_url($url)["host"].$curr;
-				}else if (substr($curr, 0, 1) == "#") {
-					$curr = parse_url($url)["scheme"]."://".parse_url($url)["host"].parse_url($url)["path"].$curr;
-				}else if (substr($curr, 0, 5) != "https" && substr($curr, 0, 4) != "http") {
-					$curr = parse_url($url)["scheme"]."://".parse_url($url)["host"].parse_url($url)["path"].$curr;
-				}
-				// Check link if it's data type equals to given data type
-				// and if it's not in download list, add it to download list
-				if ((substr($curr, strlen($curr)-4) == $this->dataType) && (!in_array($curr, $this->downloadList))) {
-					$this->downloadList[] = $curr;
-				}
-				// Check if the current link has already been crawled
-				if (!in_array($curr, $this->done) && !in_array($curr, $this->queue)) {
-					// Store current link to done
-					$this->done[] = $curr;
-					// Store current link to queue as well
-					$this->queue[] = $curr;
-					// Get details of the current link
-					//getDetails($curr);  
+				// Link correction
+				$curr = $this->linkCorrection($link->getAttribute("href"), $url);
+				if ($curr !== false) {
+					// Parse current link for controls
+					$parsedCurr = parse_url($curr);
+					// Is current link sublink of the seed
+					if (isset($parsedCurr["path"]) && strpos($parsedCurr["path"], $this->parsedSeedPage["path"]) !== false) {
+						// If current link is sublink of the seed
+						// Check if the current link has already been crawled
+						// If not add it to all links
+						if (!in_array($curr, $this->allLinks)) {
+							$this->allLinks[] = $curr;
+							// Check data type 
+							if ($this->dataTypeControl($curr)) {
+								$this->downloadList[] = $curr;
+							}	
+						}
+					}
 				}
 			}
-			// Decrease depth
-			$this->depth--;
+			// Increase link index for allLink array
+			$this->linkIndex++;
+			// Check if passed next layer 
+			if ($this->linkIndex == $this->layerEnd) {
+				$this->layerCounter++;
+				$this->layerEnd = count($this->allLinks);
+			}
+			// Recursion starts
+			$this->crawl(); 
 		}
+	}
+	
+	// Function which fixes and returns link according to rule link
+	private function linkCorrection($link, $ruleLink) {
+		// Parse url for following controls
+		$parsedURL = parse_url($ruleLink);
+		// Fixing strings as desired, using php's substr and the parsedURL
+		$length = strlen($link);   // Just for first control
+		if ((substr($link, $length-8) == "?lang=tr") || (substr($link, $length-8) == "?lang=en")) {
+			return false;
+		}else if (substr($link, 0, 1) == "/") {
+			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$link;
+		}else if (substr($link, 0, 1) == "#") {
+			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$parsedURL["path"].$link;
+		}else if (substr($link, 0, 7) == "mailto:") {
+			return false;
+		}else if (substr($link, 0, 11) == "javascript:") {
+			return false;
+		}else if (substr($link, 0, 5) != "https" && substr($link, 0, 4) != "http") {
+			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$parsedURL["path"].$link;
+		}
+		return $link;
+	}
+	
+	// Function which check for data type
+	private function dataTypeControl ($link) {
+		$pieces = explode('.', $link);
+		$ext = end($pieces);
+		if ($this->dataType == $ext) {
+			return true;
+		}
+		return false;
 	}
 	
 	// Getting extracted links according to given data type
@@ -80,43 +122,7 @@ class Crawler {
 	// Getting extracted links according to given data type
 	public function getCrawledList() {
 		echo '<pre>';
-		print_r($this->done);
-	}
-	
-	// Funciton for retrieving details of links
-	public function getDetails($url) {
-		// Getting targeted site as Document Object Model
-		$dom = new DOMDocument();
-		// @Suppress warnings
-		@$dom->loadHTML(file_get_contents($url, false, $this->context));
-		// Title info
-		$title = $dom->getElementsByTagName("title");
-		// Check if can't grab title
-		if ($title->length > 0) {
-			$node = $title->item(0);
-			$title = $node->nodeValue;
-		}else {
-			$title = "";
-		}	
-		// Description info
-		$description = "";
-		// Keywords info
-		$keywords = "";
-		// Getting metas from DOM
-		$metas = $dom->getElementsByTagName("meta");
-		for ($i = 0; $i < $metas->length; $i++) {
-			$meta = $metas->item($i);
-			if ($meta->getAttribute("name") == strtolower("description")) {
-				$description = $meta->getAttribute("content");
-			}
-			if ($meta->getAttribute("name") == strtolower("keywords")) {
-				$keywords = $meta->getAttribute("content");
-			}
-		}
-		$info['Title'] = $title;
-		$info['Description'] = $description;
-		$info['Keywords'] = $keywords;
-		$info['URL'] = $url;
+		print_r($this->allLinks);
 	}
 	
 	// Destructor of crawler class
@@ -126,8 +132,8 @@ class Crawler {
 }
 
 // Test
-$dataType = ".pdf";
-$depth = 16;
+$dataType = "pdf";
+$depth = 2;
 $seedPage = "https://www.ce.yildiz.edu.tr/personal/pkoord/file";
 
 // Initialize test
