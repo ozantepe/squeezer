@@ -14,10 +14,10 @@ class Crawler {
 	private $options;   // User-Agent options
 	private $context;   // Context for request info
 	
-	public function __construct($dataType, $depth, $ceedPage) {
+	public function __construct($dataType, $depth, $seedPage) {
 		$this->dataType = $dataType;
 		$this->depth = $depth;
-		$this->ceedPage = $ceedPage;
+		$this->seedPage = $seedPage;
 	}
 	
 	public function prepareCrawling() {
@@ -38,7 +38,7 @@ class Crawler {
 
 	public function crawl() {
 		// Check if layerCounter exceeded the depth or not
-		if($this->depth > $this->layerCounter) {
+		if (($this->depth > $this->layerCounter) && ($this->layerCounter < $this->layerEnd)) {
 			// Get the link from queue
 			$url = $this->allLinks[$this->linkIndex];
 			// @Suppress warnings
@@ -51,18 +51,15 @@ class Crawler {
 				if ($curr !== false) {
 					// Parse current link for controls
 					$parsedCurr = parse_url($curr);
+					
 					// Is current link sublink of the seed
-					if (isset($parsedCurr["path"]) && strpos($parsedCurr["path"], $this->parsedSeedPage["path"]) !== false) {
-						// If current link is sublink of the seed
-						// Check if the current link has already been crawled
-						// If not add it to all links
-						if (!in_array($curr, $this->allLinks)) {
-							$this->allLinks[] = $curr;
-							// Check data type 
-							if ($this->dataTypeControl($curr)) {
-								$this->downloadList[] = $curr;
-							}	
-						}
+					if (!in_array($curr, $this->allLinks) && $this->linkSelection($parsedCurr, $this->parsedSeedPage)) {	
+						$this->allLinks[] = $curr;
+						// Check data type 
+						if ($this->dataTypeControl($curr)) {
+							$this->downloadList[] = $curr;
+						}	
+						
 					}
 				}
 			}
@@ -79,27 +76,84 @@ class Crawler {
 	}
 		
 	
-	// Function which fixes and returns link according to rule link
+	private function linkSelection ($parsedLink, $parsedRuleLink) {
+		
+		if ($parsedLink['host'] !== $parsedRuleLink['host']) { // if hosts not same, junk it
+			return false;
+		}
+		
+		// check if there link is same layered directory as rule link
+		// junk it
+		if (isset($parsedRuleLink['path']) && isset($parsedLink['path'])) {
+			$ruleDirs = explode('/',$parsedRuleLink['path']);
+			$linkDirs = explode('/',$parsedLink['path']);
+			$rds = count($ruleDirs);
+			$lds = count($linkDirs);
+			if (($lds>=$rds)&&($rds>=2)) {
+				for ($i=0; $i<$lds; $i++) {
+					if (($ruleDirs[$rds-2] == $linkDirs[$i])&&($i<$lds-1)&&
+						($ruleDirs[$rds-1] !== $linkDirs[$i+1])) {
+							return false;	
+					}
+				}
+			}
+		} 
+		
+		// if rule has path link gotta have path too.
+		if (isset($parsedRuleLink['path']) && !isset($parsedLink['path'])) {
+			return false;
+		}
+		
+		return true;
+	}
+	
 	private function linkCorrection($link, $ruleLink) {
 		// Parse url for following controls
-		$parsedURL = parse_url($ruleLink);
-		// Fixing strings as desired, using php's substr and the parsedURL
-		$length = strlen($link);   // Just for first control
-		if ((substr($link, $length-8) == "?lang=tr") || (substr($link, $length-8) == "?lang=en")) {
+		$parsedRuleLink = parse_url($ruleLink);
+		$parsedLink = parse_url($link);
+	
+		if (!isset($parsedLink["scheme"])) { // if no scheme in squeezed link add rule's
+			$parsedLink["scheme"] = $parsedRuleLink["scheme"];
+		} else if ($parsedLink["scheme"] == "mailto") { // destroys mailto links 
 			return false;
-		}else if (substr($link, 0, 1) == "/") {
-			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$link;
-		}else if (substr($link, 0, 1) == "#") {
-			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$parsedURL["path"].$link;
-		}else if (substr($link, 0, 7) == "mailto:") {
-			return false;
-		}else if (substr($link, 0, 11) == "javascript:") {
-			return false;
-		}else if (substr($link, 0, 5) != "https" && substr($link, 0, 4) != "http") {
-			$link = $parsedURL["scheme"]."://".$parsedURL["host"].$parsedURL["path"].$link;
 		}
-		return $link;
+		
+		if (!isset($parsedLink["host"])) { // if no host in squeezed link add rule's
+			$parsedLink["host"] = $parsedRuleLink["host"];
+		}
+		
+		if (isset($parsedLink['path'])) { // if there is fake path delete it
+			if ($parsedLink['path'] == '/') {
+				$parsedLink['path'] = '';
+			}
+		}
+		
+		if (isset($parsedLink["fragment"])) { // destroys fragments
+			$parsedLink["fragment"] = null;
+		}
+		
+		if (isset($parsedLink["query"])) {
+			if (strpos($parsedLink["query"], "lang") !== false) { // destroys language querys
+				return false;
+			}
+		}
+		
+		return $this->unparse_url($parsedLink);
 	}
+	
+	private function unparse_url($parsed_url) { 
+	  $scheme   = isset($parsed_url['scheme']) ? $parsed_url['scheme'] . '://' : ''; 
+	  $host     = isset($parsed_url['host']) ? $parsed_url['host'] : ''; 
+	  $port     = isset($parsed_url['port']) ? ':' . $parsed_url['port'] : ''; 
+	  $user     = isset($parsed_url['user']) ? $parsed_url['user'] : ''; 
+	  $pass     = isset($parsed_url['pass']) ? ':' . $parsed_url['pass']  : ''; 
+	  $pass     = ($user || $pass) ? "$pass@" : ''; 
+	  $path     = isset($parsed_url['path']) ? $parsed_url['path'] : ''; 
+	  $query    = isset($parsed_url['query']) ? '?' . $parsed_url['query'] : ''; 
+	  $fragment = isset($parsed_url['fragment']) ? '#' . $parsed_url['fragment'] : ''; 
+	  return "$scheme$user$pass$host$port$path$query$fragment"; 
+	}
+	
 	
 	// Function which check for data type
 	private function dataTypeControl ($link) {
@@ -113,9 +167,11 @@ class Crawler {
   
 	
 	// Getting extracted links according to given data type
-	public function getCrawledList() {
+	public function printCrawledList() {
 		echo '<pre>';
 		print_r($this->allLinks);
+	}	
+	
 	public function getDownloadList() {
 		return $this->downloadList;
 	}
@@ -165,11 +221,14 @@ class Crawler {
 
 // Test
 $dataType = "pdf";
-$depth = 4;
-$ceedPage = "https://www.ce.yildiz.edu.tr/personal/pkoord";
+$depth = 3;
+$seedPage = "http://www.ce.yildiz.edu.tr/personal/sirma";
 
 // Initialize test
-$myCrawler = new Crawler($dataType, $depth, $ceedPage);
+$myCrawler = new Crawler($dataType, $depth, $seedPage);
 $myCrawler->prepareCrawling();
 $myCrawler->crawl();
+$myCrawler->printCrawledList();
+echo '<pre>';
+print_r($myCrawler->getDownloadList());
 ?>

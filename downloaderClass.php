@@ -4,7 +4,6 @@ class Downloader {
 	
 	private $downloadList = array();
 	private $dataList = array();
-	private $fileCounter = 0;
 	private $dirPath;
 	private $zippedDataPath;
 	
@@ -27,11 +26,10 @@ class Downloader {
 	public function download($link) {
 		$file = file_get_contents($link); // file has token to main memory
 		if (!$file) return;	// problem controller
+		$parsedLink = parse_url($link);
 		
 		// extension founder and path creator
-		$pieces = explode('.',$link);
-		$fileName = (string)$this->fileCounter.'.'.end($pieces);
-		$this->fileCounter++;
+		$fileName = str_replace("/", "-", $parsedLink["path"]);
 		$filePath = $this->dirPath.'/'.$fileName;
 		
 		// file creation
@@ -81,7 +79,6 @@ $d = new Downloader($links);
 $d->prepareDownloading();
 $d->multiDownload();
 $d->zipData();
-echo $d->getZippedData();
 
 
 ?>
