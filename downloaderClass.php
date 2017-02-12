@@ -56,8 +56,21 @@ class Downloader {
 		$zip->close();
 	}
 	
-	public function getZippedData () {
-		return $this->zippedDataPath;
+	public function downloadZippedData () {
+		if (file_exists($this->zippedDataPath)) {
+			header('Content-Description: File Transfer');
+			header('Content-Type: application/octet-stream');
+			header('Content-Disposition: attachment; filename='.basename($this->zippedDataPath));
+			header('Content-Transfer-Encoding: binary');
+			header('Expires: 0');
+			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+			header('Pragma: public');
+			header('Content-Length: ' . filesize($this->zippedDataPath));
+			ob_clean();
+			flush();
+			readfile($this->zippedDataPath);
+			exit();
+		}
 	}
 	
 	function __destruct() {
@@ -79,7 +92,7 @@ $d = new Downloader($links);
 $d->prepareDownloading();
 $d->multiDownload();
 $d->zipData();
-
+$d->downloadZippedData();
 
 ?>
 
