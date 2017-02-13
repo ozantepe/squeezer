@@ -2,15 +2,7 @@
 	// Start session to retrieve values from server session
 	session_start(); 
 	$downloadList = $_SESSION['downloadList'];
-
-	// Creating downloader
-	include 'downloaderClass.php';
-	$downloader = new Downloader($downloadList);
-	$downloader->prepareDownloading();
-	$downloader->multiDownload();
-	$downloader->zipData();
 ?>
-
 <html>
 	<head>
 		<meta charset="utf-8">
@@ -32,18 +24,32 @@
 		<div class="ui container">
 			<h1 class="ui header">Thanks for using Squeezer...</h1>
 			<form class="ui form" action="" method="post">
-				<label>You can download your squeezed documents</label><br><br>
-				<button type="submit" name="submit" class="ui button">Download</button><br><br>
 				<label>Here are the squeezed links:</label><br><br>
+				<?php
+					foreach ($downloadList as $link) {
+						echo '<input type="checkbox" name="link[]" value="'.$link.'"> '.$link.'<br>';
+					}
+				?>
+				<br>
+  				<label>Select your squeezed items then hit the download button !</label><br><br>
+				<button type="submit" name="submit" class="ui button">Download</button><br><br>
 			</form>	
 		</div>
 	</body>
 </html>
 
 <?php
-	if(isset($_POST['submit'])) {
-		// If clicked on download button,
-		// download the zipped data
+	// If links selected and the download button clicked,
+	if(isset($_POST['submit']) && isset($_POST['link'])) {
+		// Add selected links to download list
+		$downloadList = $_POST['link'];
+
+		// Create downloader and download the list
+		include 'downloaderClass.php';
+		$downloader = new Downloader($downloadList);
+		$downloader->prepareDownloading();
+		$downloader->multiDownload();
+		$downloader->zipData();
 		$downloader->downloadZippedData();
 	}
 ?>
