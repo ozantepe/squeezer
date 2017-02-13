@@ -60,6 +60,6 @@
 
 		// Transfer download list to result page
 		$_SESSION['downloadList'] = $downloadList;
-		header('Location: resultPage.php');				
+		header('Location: result.php');				
 	}
 ?>
