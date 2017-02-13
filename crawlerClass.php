@@ -106,7 +106,7 @@ class Crawler {
 		
 	}
 }
-
+/*
 // Test
 $dataType = "document";
 $depth = 2; // default 1
@@ -119,4 +119,5 @@ $myCrawler->crawl();
 $myCrawler->printCrawledList();
 echo '<pre>';
 print_r($myCrawler->getDownloadList());
+*/
 ?>

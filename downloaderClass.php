@@ -78,7 +78,7 @@ class Downloader {
 	}
 	
 }
-
+/*
 // test area
 $links = array(
 "https://www.ce.yildiz.edu.tr/user/photo/thumb/131/hhb.png",
@@ -93,6 +93,6 @@ $d->prepareDownloading();
 $d->multiDownload();
 $d->zipData();
 $d->downloadZippedData();
-
+*/
 ?>
 
