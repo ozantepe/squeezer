@@ -1,45 +1,46 @@
 <?php
 
 class Downloader {
-	
+
 	private $downloadList = array();
 	private $dataList = array();
 	private $dirPath;
 	private $zippedDataPath;
-	
+	private $maxFileSize;
+
 	public function __construct($downloadList) {
 		$this->downloadList = $downloadList;
 	}
-	
+
 	public function prepareDownloading() {
 		$date = new DateTime();
-		$this->dirPath = "docs/".(string)$date->getTimestamp();
+		$this->dirPath = "docs/".md5(uniqid()).(string)$date->getTimestamp();
 		mkdir($this->dirPath, 0777, true); // mode will change for security
 	}
-	
+
 	public function multiDownload() {
 		foreach ($this->downloadList as $dLink) {
 			$this->download($dLink, false);
 		}
 	}
-	
+
 	public function download($link) {
 		$file = file_get_contents($link); // file has token to main memory
 		if (!$file) return;	// problem controller
 		$parsedLink = parse_url($link);
-		
+
 		// extension founder and path creator
 		$fileName = str_replace("/", "-", $parsedLink["path"]);
 		$filePath = $this->dirPath.'/'.$fileName;
-		
+
 		// file creation
 		file_put_contents($filePath, $file);
 		$this->dataList[$fileName] = $filePath;
-		
+
 		// can be added immediate download for single document without saving data
-		
+
 	}
-	
+
 	public function zipData() {
 		// zip file creation
 		$zip = new ZipArchive();
@@ -48,14 +49,14 @@ class Downloader {
 			echo 'problem<br>';
 			return;
 		}
-		
+
 		// adding files
 		foreach(array_keys($this->dataList) as $key) {
 			$zip->addFile($this->dataList[$key], $key);
 		}
 		$zip->close();
 	}
-	
+
 	public function downloadZippedData () {
 		if (file_exists($this->zippedDataPath)) {
 			header('Content-Description: File Transfer');
@@ -69,14 +70,33 @@ class Downloader {
 			ob_clean();
 			flush();
 			readfile($this->zippedDataPath);
-			exit();
+			$this->deleteDir($this->dirPath);
+			return;
 		}
 	}
-	
-	function __destruct() {
-		
+
+	public static function deleteDir($dirPath) {
+    if (! is_dir($dirPath)) {
+        throw new InvalidArgumentException("$dirPath must be a directory");
+    }
+    if (substr($dirPath, strlen($dirPath) - 1, 1) != '/') {
+        $dirPath .= '/';
+    }
+    $files = glob($dirPath . '*', GLOB_MARK);
+    foreach ($files as $file) {
+        if (is_dir($file)) {
+            self::deleteDir($file);
+        } else {
+            unlink($file);
+        }
+    }
+    rmdir($dirPath);
 	}
-	
+
+	function __destruct() {
+
+	}
+
 }
 /*
 // test area
@@ -88,11 +108,24 @@ $links = array(
 "https://www.ce.yildiz.edu.tr/user/photo/thumb/29/mek.jpg"
 );
 
+$time_start = microtime(true);
+
+foreach ($links as $link) {
+$fp = fopen($link, 'r');
+$data = stream_get_meta_data($fp);
+fclose($fp);
+
+echo $data['wrapper_data'][7].'<br>';
+}
+
 $d = new Downloader($links);
 $d->prepareDownloading();
 $d->multiDownload();
 $d->zipData();
-$d->downloadZippedData();
+//$d->downloadZippedData();
+
+$time_end = microtime(true);
+echo ($time_end - $time_start)/60;
+
 */
 ?>
-

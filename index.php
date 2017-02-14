@@ -5,37 +5,44 @@
 		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.css">
 	</head>
 	<body>
-		<div class="ui vertical compact menu">
+		<div class="ui horizontal menu">
 			<div class="item">
-				<a href="#">Home</a>
+				<a href="index.php">Home</a>
 			</div>
 			<div class="item">
-				<a href="#">About</a>
+				<a href="about.html">About</a>
 			</div>
 			<div class="item">
-				<a href="#">Contact</a>
+				<a href="contact.html">Contact</a>
 			</div>
 		</div>
+		<h1 class="ui center aligned header">Welcome to SQEEZER</h1>
 		<div class="ui container">
-			<h1 class="ui header">Welcome to Squeezer</h1>
-			<form class="ui form" action="" method="post">
-				<label for="seed_page">Please enter the url to search</label>
-				<div class="ten wide field">
-					<input type="text" name="seed_page" placeholder="Search...">
+			<form class="ui form" action="index.php" method="post">
+				<div class="ui segments">
+					<div class="ui grey inverted segment">
+						<div class="ui teal label">
+							<label for="seed_page">Please enter the url to search</label>
+						</div>
+						<input type="text" name="seed_page" placeholder="Search...">
+					</div>
+					<div class="ui grey inverted segment">
+						<div class="ui teal label">
+							<label for="data_type">Please select the extension</label>
+						</div>
+						<select class="ui simple dropdown" name="data_type">
+							<option value="document">Document</option>
+							<option value="image">Image</option>
+							<option value="video">Video</option>
+							<option value="audio">Audio</option>
+							<option value="script">Script</option>
+						</select>
+					</div>
+					<div class="ui grey inverted segment">
+						<button type="submit" name="submit" class="ui yellow button">Search</button>
+					</div>
 				</div>
-				<label for="data_type">Please select the extension</label>
-				<div class="two wide field">
-					<select class="ui compact selection dropdown" name="data_type">
-						<option value="document">Document</option>
-						<option value="image">Image</option>
-						<option value="video">Video</option>
-						<option value="audio">Audio</option>
-						<option value="script">Script</option>
-					</select>
-					<br><br>
-					<button type="submit" name="submit" class="ui button">Search</button>	
-				</div>
-			</form>	
+			</form>
 		</div>
 	</body>
 </html>
@@ -59,7 +66,15 @@
 		$downloadList = $crawler->getDownloadList();
 
 		// Transfer download list to result page
-		$_SESSION['downloadList'] = $downloadList;
-		header('Location: result.php');				
+		$token = md5(uniqid());
+		$_SESSION[$token] = $downloadList;
+		echo '
+		<form id= "token_form" action="result.php" method="post">
+		<input type="hidden" name="token_id" value="'.$token.'">
+		</form>
+		<script>
+			document.getElementById("token_form").submit();
+		</script>
+		';
 	}
 ?>
