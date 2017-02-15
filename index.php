@@ -3,7 +3,6 @@
 	$seedPage = "";
 	$seedPageErr = "";
 	$validation = true;
-
 	if ($_SERVER["REQUEST_METHOD"] == "POST") {
 	  if (empty($_POST["seedPage"])) {
 	    $seedPageErr = "*Please enter a url to search";
@@ -17,24 +16,20 @@
 	    }
 	  } 
 	}
-
 	if(isset($_POST['submit']) && $validation) {
 		// Start session if submitted
 		session_start();
-
 	    // Get input values to variables
 		$data_types = array('document', 'image', 'video', 'audio', 'script');
 		$selected_data_type = htmlspecialchars($_POST['data_type']);
 		$depth = 1;
 		$seedPage = htmlspecialchars($_POST['seedPage']);
-
 		// Create crawler
 		include 'crawlerClass.php';
 		$crawler = new Crawler($selected_data_type, $depth, $seedPage);
 		$crawler->prepareCrawling();
 		$crawler->crawl();
 		$downloadList = $crawler->getDownloadList();
-
 		// Transfer download list to result page
 		$token = md5(uniqid());
 		$_SESSION[$token] = $downloadList;
@@ -47,7 +42,6 @@
 		</script>
 		';
 	}
-
 	function test_input($data) {
 	  $data = trim($data);
 	  $data = stripslashes($data);

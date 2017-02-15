@@ -19,7 +19,6 @@
 			if(isset($_POST['submit']) && isset($_POST['link'])) {
 				// Add selected links to download list
 				$downloadList = $_POST['link'];
-
 				// Create downloader and download the list
 				include 'downloaderClass.php';
 				$downloader = new Downloader($downloadList);
@@ -103,7 +102,6 @@
 				// Change all ".checkbox" checked status 
 			    $(".checkbox").prop('checked', $(this).prop("checked"));
 			});
-
 			// ".checkbox" change 
 			$('.checkbox').change(function() { 
 			    // Uncheck "select_all", if one of the listed checkbox item is unchecked
@@ -119,4 +117,3 @@
 		</script>
 		</body>
 </html>
-
