@@ -3,7 +3,6 @@
 	session_start();
 	if (isset($_POST["token_id"]) && isset($_SESSION[$_POST["token_id"]])) {
 		$downloadList = $_SESSION[$_POST["token_id"]];
-		unset($_SESSION[$_POST["token_id"]]);
 	}
 ?>
 <html>
@@ -12,6 +11,14 @@
 		<title>Squeezer</title>
 		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.css">
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<style>
+			body {
+					background-color : #fafafa;
+			}
+			.ui.segment {
+					background-color : #1da8af;
+			}
+		</style>
 	</head>
 	<body>
 		<?php
@@ -23,9 +30,25 @@
 				include 'downloaderClass.php';
 				$downloader = new Downloader($downloadList);
 				$downloader->prepareDownloading();
-				$downloader->multiDownload();
+				try {
+					$downloader->multiDownload();
+				} catch (Exception $e) {
+					echo '
+					<script>
+						alert("Total file size exceeded!\nSelect less..");
+					</script>
+					<form id= "token_form" action="result.php" method="post">
+					<input type="hidden" name="token_id" value="'.$_POST["token_id"].'">
+					</form>
+					<script>
+						document.getElementById("token_form").submit();
+					</script>
+					';
+					exit();
+				}
 				$downloader->zipData();
 				$downloader->downloadZippedData();
+				unset($_SESSION[$_POST["token_id"]]);
 				exit();
 			}else {
 		?>
@@ -44,12 +67,12 @@
 			<h1 class="ui center aligned grey header">Thanks for using SQUEEZER...</h1>
 			<form class="ui form" action="" method="post">
 				<div class = "ui segments">
-					<div class="ui yellow inverted segment">
+					<div class="ui segment">
 						<div class="ui grey label">
 							<label>Here are the squeezed links</label>
 						</div>
 					</div>
-					<div class="ui yellow inverted segment">	
+					<div class="ui segment">
 						<div class="ui container">
 							<div class="ui grey inverted segment">
 								<?php
@@ -78,7 +101,7 @@
 							</div>
 						</div>
 					</div>
-					<div class = "ui yellow inverted segment">
+					<div class = "ui segment">
 						<div class ="grouped fields">
 							<div class="field">
 								<div class="ui bottom attached grey label">
@@ -91,23 +114,24 @@
 						</div>
 					</div>
 				</div>
+				<input type="hidden" name="token_id" value=<?php echo $_POST["token_id"]; ?> />
 			</form>
 		</div>
 		<?php
 			}
 		?>
-		<script type="text/javascript">	
+		<script type="text/javascript">
 			// Select all checkboxes
 			$("#select_all").change(function() {  // "select_all" change
-				// Change all ".checkbox" checked status 
+				// Change all ".checkbox" checked status
 			    $(".checkbox").prop('checked', $(this).prop("checked"));
 			});
-			// ".checkbox" change 
-			$('.checkbox').change(function() { 
+			// ".checkbox" change
+			$('.checkbox').change(function() {
 			    // Uncheck "select_all", if one of the listed checkbox item is unchecked
 			    if(false == $(this).prop("checked")){ // If this item is unchecked
 			    	// Change "select_all" checked status to false
-			        $("#select_all").prop('checked', false); 
+			        $("#select_all").prop('checked', false);
 			    }
 			    // Check "select_all" if all checkbox items are checked
 			    if ($('.checkbox:checked').length == $('.checkbox').length ){

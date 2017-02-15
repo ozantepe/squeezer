@@ -6,7 +6,7 @@ class Downloader {
 	private $dataList = array();
 	private $dirPath;
 	private $zippedDataPath;
-	private $maxFileSize;
+	private $maxFileSize = 31457280;
 
 	public function __construct($downloadList) {
 		$this->downloadList = $downloadList;
@@ -19,8 +19,16 @@ class Downloader {
 	}
 
 	public function multiDownload() {
+		$totalSize = 0;
 		foreach ($this->downloadList as $dLink) {
-			$this->download($dLink, false);
+			$totalSize += $this->retrieve_remote_file_size($dLink);
+		}
+		if ($totalSize <= $this->maxFileSize) {
+			foreach ($this->downloadList as $dLink) {
+				$this->download($dLink, false);
+			}
+		} else {
+			throw new Exception("file size exceeding error!");
 		}
 	}
 
@@ -93,6 +101,21 @@ class Downloader {
     rmdir($dirPath);
 	}
 
+	private function retrieve_remote_file_size($url){
+     $ch = curl_init($url);
+
+     curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+     curl_setopt($ch, CURLOPT_HEADER, TRUE);
+     curl_setopt($ch, CURLOPT_NOBODY, TRUE);
+		 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+     $data = curl_exec($ch);
+     $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+
+     curl_close($ch);
+     return $size;
+	}
+
 	function __destruct() {
 
 	}
@@ -126,6 +149,5 @@ $d->zipData();
 
 $time_end = microtime(true);
 echo ($time_end - $time_start)/60;
-
 */
 ?>
