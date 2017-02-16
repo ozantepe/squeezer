@@ -1,4 +1,8 @@
 <?php
+
+	//ini_set('display_errors',1);
+	//error_reporting(E_ALL);
+
 	// Start session to retrieve values from server session
 	session_start();
 	if (isset($_POST["token_id"]) && isset($_SESSION[$_POST["token_id"]])) {
