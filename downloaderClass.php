@@ -14,7 +14,7 @@ class Downloader {
 
 	public function prepareDownloading() {
 		$date = new DateTime();
-		$this->dirPath = "docs/".md5(uniqid()).(string)$date->getTimestamp();
+		$this->dirPath = "/home/docs/".md5(uniqid()).(string)$date->getTimestamp();
 		mkdir($this->dirPath, 0777, true); // mode will change for security
 	}
 
