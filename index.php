@@ -62,10 +62,6 @@
 			body {
 					background-color : #fafafa;
 			}
-			
-			.ui.segment {
-					background-color : #1da8af;
-			}
 		</style>
 	</head>
 	<body>
@@ -84,7 +80,7 @@
 			<h1 class="ui center aligned grey header">Welcome to SQUEEZER</h1>
 			<form class="ui form" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>" method="post">
 				<div class="ui segments">
-					<div class="ui segment">
+					<div class="ui teal inverted segment">
 						<div class="ui grey label" for="seedPage">
 							Please enter the url to search
 						</div>
@@ -93,7 +89,7 @@
 							<span class="error"><?php echo $seedPageErr;?></span>
 						</div>
 					</div>
-					<div class="ui segment">
+					<div class="ui teal inverted segment">
 						<div class="ui grey label" for="data_type">
 							Please select the data type
 						</div>
@@ -107,7 +103,7 @@
 							</select>
 						</div>
 					</div>
-					<div class="ui segment">
+					<div class="ui teal inverted segment">
 						<button type="submit" name="submit" class="ui grey button">Search</button>
 					</div>
 				</div>
