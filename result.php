@@ -96,19 +96,27 @@
 										<label>Select All</label>
 									</div>
 								</div>
+								<br>
+								<div class='field'>
+									<div class='ui bottom attached grey label'>
+										<label>Select your squeezed items then hit the download button !</label>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
 					<div class = 'ui teal inverted segment'>
-						<div class ='grouped fields'>
-							<div class='field'>
-								<div class='ui bottom attached grey label'>
-									<label>Select your squeezed items then hit the download button !</label>
+						<div class='ui grid'>
+							<div class='row'>
+								<div class='six wide column'>
+									<button type='submit' name='submit' class='ui grey button'>Download</button>
+								</div>
+								<div class='four wide column'>
+									<div class='ui grey button'>
+										<a href='index.php' style='color:white'>You can try a different search</a>
+									</div>	
 								</div>
 							</div>
-							<div class='field'>
-								<button type='submit' name='submit' class='ui grey button'>Download</button>
-							</div><br>
 						</div>
 					</div>
 					";
@@ -125,7 +133,7 @@
 						<div class='row'></div>
 							<div class='ui teal button'>
 								<a href='index.php' style='color:white'><h2>You can try a different search</h2></a>
-							 </div>		
+							 </div>
 					    </div>
 					</div>
 					";

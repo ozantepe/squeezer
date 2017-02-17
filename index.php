@@ -14,7 +14,7 @@
 	  } else {
 	    $seedPage = test_input($_POST["seedPage"]);
 	    // Check if URL address syntax is valid
-	    if (!preg_match("/\b(?:(?:https?|ftp):\/\/|www\.)[-a-z0-9+&@#\/%?=~_|!:,.;]*[-a-z0-9+&@#\/%=~_|]/i",$seedPage)) {
+	    if (!preg_match('%^(?:(?:https?|ftp)://)(?:\S+(?::\S*)?@|\d{1,3}(?:\.\d{1,3}){3}|(?:(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)(?:\.(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)*(?:\.[a-z\x{00a1}-\x{ffff}]{2,6}))(?::\d+)?(?:[^\s]*)?$%iu', $seedPage)) {
 	      $seedPageErr = "Invalid URL";
 	      $validation = false;
 	    }
@@ -85,7 +85,7 @@
 							Please enter the url to search
 						</div>
 						<div class="field" name="URL">
-							<input type="text" name="seedPage" placeholder="Search..." value="<?php echo $seedPage;?>">
+							<input type="text" name="seedPage" placeholder="htttp://example.com" value="<?php echo $seedPage;?>">
 							<span class="error"><?php echo $seedPageErr;?></span>
 						</div>
 					</div>
